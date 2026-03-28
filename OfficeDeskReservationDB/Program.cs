@@ -1,4 +1,6 @@
 ﻿using OfficeDeskReservationDB.Data;
+using System;
+using System.IO;
 
 namespace OfficeDataGenerator
 {
@@ -8,8 +10,7 @@ namespace OfficeDataGenerator
         {
             using (var context = new AppDbContext())
             {
-                Console.WriteLine("Inicjalizacja bazy danych...");
-
+                Console.WriteLine("Initializing the database...");
                 context.Database.EnsureCreated();
 
                 bool isRunning = true;
@@ -38,6 +39,12 @@ namespace OfficeDataGenerator
                     switch (choice)
                     {
                         case "1":
+                            if (!context.Database.CanConnect())
+                            {
+                                Console.WriteLine("\n[ERROR] Database does not exist! Please create it first (Option 5).");
+                                break;
+                            }
+
                             Console.Write("\nEnter the count of generating random data (10, 100, 1000...): ");
                             if (!int.TryParse(Console.ReadLine(), out int count) || count <= 0)
                             {
@@ -56,36 +63,48 @@ namespace OfficeDataGenerator
                             break;
 
                         case "2":
+                            if (!context.Database.CanConnect())
+                            {
+                                Console.WriteLine("\n[ERROR] Database does not exist! Please create it first (Option 5).");
+                                break;
+                            }
+
                             DataTransfer.ExportDatabaseToJson(context, backupPath);
                             break;
 
                         case "3":
+                            if (!context.Database.CanConnect())
+                            {
+                                Console.WriteLine("\n[ERROR] Database does not exist! Please create it first (Option 5).");
+                                break;
+                            }
+
                             DataTransfer.ImportDatabaseFromJson(context, testPath);
                             break;
 
                         case "4":
-                            Console.WriteLine("\n[WARNING] Trwa usuwanie bazy danych...");
+                            Console.WriteLine("\n[WARNING] Deleting the database...");
                             bool isDeleted = context.Database.EnsureDeleted();
                             if (isDeleted)
                             {
-                                Console.WriteLine("[SUCCESS] Baza danych została całkowicie usunięta.");
+                                Console.WriteLine("[SUCCESS] Database successfully deleted.");
                             }
                             else
                             {
-                                Console.WriteLine("[INFO] Baza danych nie istniała, więc nie było co usuwać.");
+                                Console.WriteLine("[INFO] Database did not exist, nothing to delete.");
                             }
                             break;
 
                         case "5":
-                            Console.WriteLine("\n[INFO] Trwa tworzenie bazy danych...");
+                            Console.WriteLine("\n[INFO] Creating the database...");
                             bool isCreated = context.Database.EnsureCreated();
                             if (isCreated)
                             {
-                                Console.WriteLine("[SUCCESS] Baza danych została utworzona, a tabele słownikowe wypełnione.");
+                                Console.WriteLine("[SUCCESS] Database successfully created and dictionary tables populated.");
                             }
                             else
                             {
-                                Console.WriteLine("[INFO] Baza danych już istnieje. Nie trzeba jej tworzyć ponownie.");
+                                Console.WriteLine("[INFO] Database already exists. No need to recreate.");
                             }
                             break;
 

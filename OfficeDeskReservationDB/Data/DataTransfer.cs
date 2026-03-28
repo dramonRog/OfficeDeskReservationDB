@@ -78,7 +78,7 @@ namespace OfficeDeskReservationDB.Data
                     {
                         if (!context.Users.Any(u => u.Email == user.Email))
                         {
-                            user.Id = 0; 
+                            user.Id = 0;
                             context.Users.Add(user);
                             addedUsers++;
                         }
@@ -98,15 +98,23 @@ namespace OfficeDeskReservationDB.Data
                     }
                 }
 
+                if (addedUsers > 0 || addedDesks > 0)
+                {
+                    context.SaveChanges();
+                }
+
                 if (backup.Reservations != null)
                 {
                     foreach (var res in backup.Reservations)
                     {
                         if (!context.Reservations.Any(r => r.DeskId == res.DeskId && r.StartTime == res.StartTime))
                         {
-                            res.Id = 0;
-                            context.Reservations.Add(res);
-                            addedRes++;
+                            if (context.Desks.Any(d => d.Id == res.DeskId) && context.Users.Any(u => u.Id == res.UserId))
+                            {
+                                res.Id = 0;
+                                context.Reservations.Add(res);
+                                addedRes++;
+                            }
                         }
                     }
                 }
@@ -117,9 +125,12 @@ namespace OfficeDeskReservationDB.Data
                     {
                         if (!context.Issues.Any(i => i.Description == issue.Description && i.ReportedAt == issue.ReportedAt))
                         {
-                            issue.Id = 0;
-                            context.Issues.Add(issue);
-                            addedIssues++;
+                            if (context.Users.Any(u => u.Id == issue.UserId) && context.Desks.Any(d => d.Id == issue.DeskId))
+                            {
+                                issue.Id = 0;
+                                context.Issues.Add(issue);
+                                addedIssues++;
+                            }
                         }
                     }
                 }
@@ -130,15 +141,18 @@ namespace OfficeDeskReservationDB.Data
                     {
                         if (!context.DeskEquipments.Any(x => x.DeskId == de.DeskId && x.EquipmentId == de.EquipmentId))
                         {
-                            context.DeskEquipments.Add(de);
-                            addedEq++;
+                            if (context.Desks.Any(d => d.Id == de.DeskId) && context.Equipments.Any(e => e.Id == de.EquipmentId))
+                            {
+                                context.DeskEquipments.Add(de);
+                                addedEq++;
+                            }
                         }
                     }
                 }
 
                 context.SaveChanges();
 
-                Console.WriteLine($"[SUCCESS] Skipped duplicates. Saved NEW records:");
+                Console.WriteLine($"[SUCCESS] Skipped duplicates and invalid relations. Saved NEW records:");
                 Console.WriteLine($"- {addedUsers} Users");
                 Console.WriteLine($"- {addedDesks} Desks");
                 Console.WriteLine($"- {addedRes} Reservations");
