@@ -34,6 +34,29 @@ namespace OfficeDeskReservationDB.Data
                 .WithMany(e => e.DeskEquipments)
                 .HasForeignKey(de => de.EquipmentId);
 
+
+            // Indexes configuration
+            // 1. COMPOSITE INDEX
+            modelBuilder.Entity<Reservation>()
+                .HasIndex(r => new { r.DeskId, r.StartTime })
+                .HasDatabaseName("IX_Reservations_Desk_StartTime");
+
+            // 2. FUNCTIONAL INDEX
+            modelBuilder.Entity<User>()
+                .Property<string>("NormalizedEmail")
+                .HasComputedColumnSql("CAST(UPPER([Email]) AS NVARCHAR(256))");
+
+            modelBuilder.Entity<User>()
+                .HasIndex("NormalizedEmail")
+                .HasDatabaseName("IX_User_Functional_UpperEmail");
+
+            // 3. BITMAP / FILTERED INDEX
+            modelBuilder.Entity<Issue>()
+                .HasIndex(i => i.IsResolved)
+                .HasDatabaseName("IX_Issues_Bitmap_Unresolved")
+                .HasFilter("[IsResolved] = 0");
+
+
             modelBuilder.Entity<Location>().HasData(
                 new Location { Id = 1, Name = "LocA", Address = "Mikolajczyl", City = "Opole" },
                 new Location { Id = 2, Name = "LocB", Address = "Proszkowska", City = "Opole" },
