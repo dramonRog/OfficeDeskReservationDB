@@ -1,0 +1,57 @@
+{
+  "Kosmici": [
+    {
+      "Imie": "Zorg",
+      "Planeta": "Mars"
+    }
+  ],
+  "NieznanaTabela": "To powinno zostac całkowicie zignorowane przez C#",
+  
+  "Users": [
+    {
+      "Id": 9999,
+      "FirstName": "Adam",
+      "LastName": "Nowak",
+      "Email": "adam.nowak@test.com",
+      "PasswordHash": "TajneHaslo123",
+      "RoleId": 1,
+      "DepartmentId": 1,
+      "SuperPower": "Latanie" 
+    },
+    {
+      "Id": 8888,
+      "FirstName": "Klon",
+      "LastName": "Adama",
+      "Email": "adam.nowak@test.com", 
+      "PasswordHash": "KlonHaslo",
+      "RoleId": 2,
+      "DepartmentId": 2
+    }
+  ],
+
+  "Desks": [
+    {
+      "Id": 500,
+      "Name": "Biurko_Prezesa_99",
+      "IsActive": true,
+      "RoomId": 1
+    },
+    {
+      "Id": 501,
+      "Name": "Biurko_Prezesa_99",
+      "IsActive": false,
+      "RoomId": 2
+    }
+  ],
+
+  "Issues": [
+    {
+      "Id": 777,
+      "Description": "Zepsuty monitor 4K",
+      "ReportedAt": "2026-03-28T10:00:00",
+      "IsResolved": false,
+      "UserId": 1,
+      "DeskId": 1
+    }
+  ]
+}

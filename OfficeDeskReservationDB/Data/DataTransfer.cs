@@ -1,73 +1,71 @@
-﻿using OfficeDeskReservationDB.Models;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using OfficeDeskReservationDB.Models; 
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using System.Text.Json.Serialization; 
 
 namespace OfficeDeskReservationDB.Data
 {
     public class DatabaseBackup
     {
-        public List<Location> Locations { get; set; } = new();
-        public List<Floor> Floors { get; set; } = new();
-        public List<Room> Rooms { get; set; } = new();
-        public List<Equipment> Equipments { get; set; } = new();
-        public List<Role> Roles { get; set; } = new();
-        public List<Department> Departments { get; set; } = new();
-        public List<User> Users { get; set; } = new();
-        public List<Desk> Desks { get; set; } = new();
-        public List<DeskEquipment> DeskEquipments { get; set; } = new();
-        public List<Reservation> Reservations { get; set; } = new();
-        public List<Issue> Issues { get; set; } = new();
+        public List<Location>? Locations { get; set; } = new();
+        public List<Floor>? Floors { get; set; } = new();
+        public List<Room>? Rooms { get; set; } = new();
+        public List<Equipment>? Equipments { get; set; } = new();
+        public List<Role>? Roles { get; set; } = new();
+        public List<Department>? Departments { get; set; } = new();
+        public List<User>? Users { get; set; } = new();
+        public List<Desk>? Desks { get; set; } = new();
+        public List<DeskEquipment>? DeskEquipments { get; set; } = new();
+        public List<Reservation>? Reservations { get; set; } = new();
+        public List<Issue>? Issues { get; set; } = new();
     }
 
-    public class DataTransfer
+    public static class DataTransfer
     {
-        private readonly AppDbContext _context;
-
-        public DataTransfer(AppDbContext context)
+        public static void ExportDatabaseToJson(AppDbContext context, string filePath)
         {
-            _context = context;
-        }
-
-        public void ExportUsersToJson(string filePath)
-        {
+            Console.WriteLine("\n--- EXPORTING DATA ---");
             Console.WriteLine("Downloading data from the database...");
 
-            DatabaseBackup backup = new DatabaseBackup
+            var backup = new DatabaseBackup
             {
-                Locations = _context.Locations.ToList(),
-                Floors = _context.Floors.ToList(),
-                Rooms = _context.Rooms.ToList(),
-                Equipments = _context.Equipments.ToList(),
-                Roles = _context.Roles.ToList(),
-                Departments = _context.Departments.ToList(),
-                Users = _context.Users.ToList(),
-                Desks = _context.Desks.ToList(),
-                DeskEquipments = _context.DeskEquipments.ToList(),
-                Reservations = _context.Reservations.ToList(),
-                Issues = _context.Issues.ToList()
+                Locations = context.Locations.AsNoTracking().ToList(),
+                Floors = context.Floors.AsNoTracking().ToList(),
+                Rooms = context.Rooms.AsNoTracking().ToList(),
+                Equipments = context.Equipments.AsNoTracking().ToList(),
+                Roles = context.Roles.AsNoTracking().ToList(),
+                Departments = context.Departments.AsNoTracking().ToList(),
+                Users = context.Users.AsNoTracking().ToList(),
+                Desks = context.Desks.AsNoTracking().ToList(),
+                DeskEquipments = context.DeskEquipments.AsNoTracking().ToList(),
+                Reservations = context.Reservations.AsNoTracking().ToList(),
+                Issues = context.Issues.AsNoTracking().ToList()
             };
 
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            string jsonString = JsonSerializer.Serialize(backup, options);
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                ReferenceHandler = ReferenceHandler.IgnoreCycles
+            };
 
+            string jsonString = JsonSerializer.Serialize(backup, options);
             File.WriteAllText(filePath, jsonString);
-            Console.WriteLine($"Success, database was exported into file: {filePath}");
+
+            Console.WriteLine($"[SUCCESS] Full database exported to: {filePath}");
         }
 
         public static void ImportDatabaseFromJson(AppDbContext context, string filePath)
         {
-            Console.WriteLine("\nRozpoczynam import z pliku JSON i zapis do bazy...");
+            Console.WriteLine("\n--- IMPORTING DATA ---");
+            Console.WriteLine("Start import database from file JSON...");
 
             if (!File.Exists(filePath))
             {
-                Console.WriteLine("[BŁĄD] Nie znaleziono pliku.");
+                Console.WriteLine("[ERROR] File doesn't exist!!!");
                 return;
             }
 
             string jsonString = File.ReadAllText(filePath);
-            // System.Text.Json domyślnie ignoruje nieznane pola (np. Department_) - to chroni nasz program!
             var backup = JsonSerializer.Deserialize<DatabaseBackup>(jsonString);
 
             if (backup != null)
@@ -80,7 +78,7 @@ namespace OfficeDeskReservationDB.Data
                     {
                         if (!context.Users.Any(u => u.Email == user.Email))
                         {
-                            user.Id = 0;
+                            user.Id = 0; 
                             context.Users.Add(user);
                             addedUsers++;
                         }
@@ -140,12 +138,12 @@ namespace OfficeDeskReservationDB.Data
 
                 context.SaveChanges();
 
-                Console.WriteLine($"[SUKCES] Pominięto duplikaty. Zapisano nowe rekordy z JSON:");
-                Console.WriteLine($"- {addedUsers} Użytkowników");
-                Console.WriteLine($"- {addedDesks} Biurek");
-                Console.WriteLine($"- {addedRes} Rezerwacji");
-                Console.WriteLine($"- {addedIssues} Zgłoszeń");
-                Console.WriteLine($"- {addedEq} Przypisań sprzętu");
+                Console.WriteLine($"[SUCCESS] Skipped duplicates. Saved NEW records:");
+                Console.WriteLine($"- {addedUsers} Users");
+                Console.WriteLine($"- {addedDesks} Desks");
+                Console.WriteLine($"- {addedRes} Reservations");
+                Console.WriteLine($"- {addedIssues} Issues");
+                Console.WriteLine($"- {addedEq} Desk Equipments");
             }
         }
     }
