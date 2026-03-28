@@ -1,9 +1,5 @@
-﻿using Bogus;
-using Microsoft.EntityFrameworkCore.Storage;
-using OfficeDeskReservationDB.Data;
+﻿using OfficeDeskReservationDB.Data;
 using OfficeDeskReservationDB.Models;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace OfficeDataGenerator
 {
