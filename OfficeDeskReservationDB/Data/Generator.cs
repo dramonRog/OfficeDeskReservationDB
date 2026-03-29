@@ -2,216 +2,202 @@
 using OfficeDeskReservationDB.Models;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 
 namespace OfficeDeskReservationDB.Data
 {
     public class Generator
     {
         private readonly AppDbContext _context;
+        private const int BatchSize = 10000; 
 
         public Generator(AppDbContext context)
         {
             _context = context;
         }
 
-        public void GenerateDesks(int count, AppDbContext context)
+        private void SaveAndClear()
         {
-            var roomIds = context.Rooms.Select(r => r.Id).ToList();
-            if (!roomIds.Any())
-            {
-                Console.WriteLine("Error: Rooms table is empty!!!");
-                return;
-            }
-
-            HashSet<string> existingNames = context.Desks.Select(d => d.Name).ToHashSet();
-
-            Faker<Desk> deskFaker = new Faker<Desk>()
-                .RuleFor(d => d.Name, f => {
-                    string name;
-                    do
-                    {
-                        name = $"D-{f.Random.Number(1, 9999)}-{f.Commerce.ProductName()}";
-                    } 
-                    while(existingNames.Contains(name));
-
-                    existingNames.Add(name);
-                    return name;
-                })
-                .RuleFor(d => d.IsActive, f => f.Random.Bool(0.8f))
-                .RuleFor(d => d.RoomId, f => f.PickRandom(roomIds));
-
-            List<Desk> generatedDesks = deskFaker.Generate(count);
-            context.AddRange(generatedDesks);
-            context.SaveChanges();
+            _context.SaveChanges();
+            _context.ChangeTracker.Clear();
         }
 
-        public void GenerateIssues(int count, AppDbContext context)
+        public void GenerateDesks(int count, AppDbContext context)
         {
-            var userIds = context.Users.Select(u => u.Id).ToList();
-            if (!userIds.Any())
-            {
-                Console.WriteLine("Users table is empty!!!");
-                return;
-            }
+            var roomIds = context.Rooms.AsNoTracking().Select(r => r.Id).ToList();
+            if (!roomIds.Any()) return;
 
-            var deskIds = context.Desks.Select(d => d.Id).ToList();
-            if (!deskIds.Any())
-            {
-                Console.WriteLine("Desks table is empty!!!");
-                return;
-            }
+            HashSet<string> existingNames = context.Desks.AsNoTracking().Select(d => d.Name).ToHashSet();
 
-            Faker<Issue> issueFaker = new Faker<Issue>()
-                .RuleFor(i => i.UserId, f => f.PickRandom(userIds))
-                .RuleFor(i => i.DeskId, f => f.PickRandom(deskIds))
-                .RuleFor(i => i.IsResolved, f => f.Random.Bool(0.7f))
-                .RuleFor(i => i.ReportedAt, f => f.Date.Past(1))
-                .RuleFor(i => i.Description, f => f.PickRandom(new string[]
+            var faker = new Faker();
+            for (int i = 1; i <= count; i++)
+            {
+                string name;
+                do
                 {
-                    "The monitor is intermittent and flickering.",
-                    "The desk is unstable and wobbly.",
-                    "The left power outlet is out.",
-                    "The wheel on the chair at this desk is broken.",
-                    "I am reporting a missing HDMI cable.",
-                    "The keyboard has a stuck spacebar.",
-                    "The internet outlet on the wall is not working."
-                }));
+                    name = $"D-{faker.Random.Number(1, 1000000)}-{faker.Commerce.ProductAdjective()}";
+                } while (existingNames.Contains(name));
 
-            List<Issue> generatedIssues = issueFaker.Generate(count);
-            context.Issues.AddRange(generatedIssues);
-            context.SaveChanges();
+                existingNames.Add(name);
+
+                context.Desks.Add(new Desk
+                {
+                    Name = name,
+                    IsActive = faker.Random.Bool(0.8f),
+                    RoomId = faker.PickRandom(roomIds)
+                });
+
+                if (i % BatchSize == 0)
+                {
+                    Console.WriteLine($"Desks: Saved {i}...");
+                    SaveAndClear();
+                }
+            }
+            SaveAndClear();
         }
 
         public void GenerateUsers(int count, AppDbContext context)
         {
-            var roleIds = context.Roles.Select(r => r.Id).ToList();
-            if (!roleIds.Any())
+            var roleIds = context.Roles.AsNoTracking().Select(r => r.Id).ToList();
+            var deptIds = context.Departments.AsNoTracking().Select(d => d.Id).ToList();
+            HashSet<string> existingEmails = context.Users.AsNoTracking().Select(u => u.Email).ToHashSet();
+
+            var faker = new Faker();
+            for (int i = 1; i <= count; i++)
             {
-                Console.WriteLine("Roles table is empty!!!");
-                return;
-            }
-
-            HashSet<string> existingEmails = context.Users.Select(u => u.Email).ToHashSet(); 
-            var departmentIds = context.Departments.Select(d => d.Id).ToList();
-
-            if (!departmentIds.Any())
-            {
-                Console.WriteLine("Departments table is empty!!!");
-                return;
-            }
-
-            Faker<User> userFaker = new Faker<User>()
-                .RuleFor(u => u.RoleId, f => f.PickRandom(roleIds))
-                .RuleFor(u => u.DepartmentId, f => f.PickRandom(departmentIds))
-                .RuleFor(u => u.FirstName, f => f.Name.FirstName())
-                .RuleFor(u => u.LastName, f => f.Name.LastName())
-                .RuleFor(u => u.Email, f =>
+                string email;
+                do
                 {
-                    string email;
-                    do
-                    {
-                        email = f.Internet.Email();
-                    } while (existingEmails.Contains(email));
+                    email = faker.Internet.Email();
+                } while (existingEmails.Contains(email));
+                existingEmails.Add(email);
 
-                    existingEmails.Add(email);
-                    return email;
-                })
-                .RuleFor(u => u.PasswordHash, f => HashPassword(f.Internet.Password()));
+                context.Users.Add(new User
+                {
+                    FirstName = faker.Name.FirstName(),
+                    LastName = faker.Name.LastName(),
+                    Email = email,
+                    RoleId = faker.PickRandom(roleIds),
+                    DepartmentId = faker.PickRandom(deptIds),
+                    PasswordHash = "hashed_dummy_password" 
+                });
 
-            List<User> generatedUsers = userFaker.Generate(count);
-            context.Users.AddRange(generatedUsers);
-            context.SaveChanges();
-        }
-
-        public void GenerateDeskEquipments(int count, AppDbContext context)
-        {
-            var deskIds = context.Desks.Select(d => d.Id).ToList();
-            if (!deskIds.Any())
-            {
-                Console.WriteLine("Desks table is empty!!!");
-                return;
+                if (i % BatchSize == 0)
+                {
+                    Console.WriteLine($"Users: Saved {i}...");
+                    SaveAndClear();
+                }
             }
-
-            var equipmentIds = context.Equipments.Select(e => e.Id).ToList();
-            if (!equipmentIds.Any())
-            {
-                Console.WriteLine("Equipments table is empty!!!");
-                return;
-            }
-
-            HashSet<(int DeskId, int EquipmentId)> usedPairs = context.DeskEquipments
-                .Select(d => new { d.DeskId, d.EquipmentId })
-                .ToList()
-                .Select(x => (x.DeskId, x.EquipmentId))
-                .ToHashSet();
-
-            int maxCombinations = deskIds.Count * equipmentIds.Count;
-            int availableSlots = maxCombinations - usedPairs.Count;
-
-            if (count > availableSlots)
-            {
-                Console.WriteLine($"Warning: Requested {count} entries, but only {maxCombinations} unique pairs are possible! Reducing count.");
-                count = availableSlots;
-            }
-
-            List<DeskEquipment> generatedDeskEquipments = new List<DeskEquipment>();
-
-            Faker<DeskEquipment> deskEquipmentFaker = new Faker<DeskEquipment>()
-                .RuleFor(d => d.DeskId, f => f.PickRandom(deskIds))
-                .RuleFor(d => d.EquipmentId, f => f.PickRandom(equipmentIds))
-                .RuleFor(d => d.Quantity, f => f.Random.Int(min: 1, max: 10));
-
-            while (generatedDeskEquipments.Count < count)
-            {
-                DeskEquipment newEntry = deskEquipmentFaker.Generate();
-
-                if (usedPairs.Add((DeskId: newEntry.DeskId, EquipmentId: newEntry.EquipmentId)))
-                    generatedDeskEquipments.Add(newEntry);
-            }
-
-            context.DeskEquipments.AddRange(generatedDeskEquipments);
-            context.SaveChanges();
+            SaveAndClear();
         }
 
         public void GenerateReservations(int count, AppDbContext context)
         {
-            var userIds = context.Users.Select(u => u.Id).ToList();
-            if (!userIds.Any())
+            var userIds = context.Users.AsNoTracking().Select(u => u.Id).ToList();
+            var deskIds = context.Desks.AsNoTracking().Select(d => d.Id).ToList();
+
+            var deskAvailability = deskIds.ToDictionary(id => id, _ => DateTime.Now.AddDays(1).Date.AddHours(8));
+
+            var faker = new Faker();
+            for (int i = 1; i <= count; i++)
             {
-                Console.WriteLine("Users table is empty!!!");
-                return;
-            }
+                int deskId = faker.PickRandom(deskIds);
+                DateTime start = deskAvailability[deskId];
+                DateTime end = start.AddHours(2);
+                deskAvailability[deskId] = start.AddHours(4); 
 
-            var deskIds = context.Desks.Select(d => d.Id).ToList();
-            if (!deskIds.Any())
-            {
-                Console.WriteLine("Desks table is empty!!!");
-                return;
-            }
-
-            Dictionary<int, DateTime> deskAvailability = deskIds.ToDictionary(
-                id => id,
-                id => context.Reservations
-                    .Where(r => r.DeskId == id)
-                    .Max(r => (DateTime?)r.EndTime) ?? DateTime.Now.AddDays(1).Date.AddHours(8)
-            );
-
-            Faker<Reservation> reservationFaker = new Faker<Reservation>()
-                .RuleFor(r => r.UserId, f => f.PickRandom(userIds))
-                .RuleFor(r => r.DeskId, f => f.PickRandom(deskIds))
-                .RuleFor(r => r.Status, f => f.PickRandom(new[] { "Confirmed", "Pending", "Completed" }))
-                .RuleFor(r => r.StartTime, (f, r) => deskAvailability[r.DeskId])
-                .RuleFor(r => r.EndTime, (f, r) =>
+                context.Reservations.Add(new Reservation
                 {
-                    DateTime end = r.StartTime.AddHours(2);
-                    deskAvailability[r.DeskId] = r.StartTime.AddHours(4);
-
-                    return end;
+                    UserId = faker.PickRandom(userIds),
+                    DeskId = deskId,
+                    Status = "Confirmed",
+                    StartTime = start,
+                    EndTime = end
                 });
 
-            List<Reservation> generatedReservations = reservationFaker.Generate(count);
-            context.Reservations.AddRange(generatedReservations);
-            context.SaveChanges();
+                if (i % BatchSize == 0)
+                {
+                    Console.WriteLine($"Reservations: Saved {i}...");
+                    SaveAndClear();
+                }
+            }
+            SaveAndClear();
+        }
+
+        public void GenerateIssues(int count, AppDbContext context)
+        {
+            var userIds = context.Users.AsNoTracking().Select(u => u.Id).ToList();
+            var deskIds = context.Desks.AsNoTracking().Select(d => d.Id).ToList();
+            var faker = new Faker();
+
+            for (int i = 1; i <= count; i++)
+            {
+                context.Issues.Add(new Issue
+                {
+                    UserId = faker.PickRandom(userIds),
+                    DeskId = faker.PickRandom(deskIds),
+                    IsResolved = faker.Random.Bool(),
+                    ReportedAt = faker.Date.Past(1),
+                    Description = faker.Lorem.Sentence()
+                });
+
+                if (i % BatchSize == 0)
+                {
+                    Console.WriteLine($"Issues: Saved {i}...");
+                    SaveAndClear();
+                }
+            }
+            SaveAndClear();
+        }
+
+        public void GenerateDeskEquipments(int count, AppDbContext context)
+        {
+            Console.WriteLine("Loading existing equipment assignments from DB...");
+            var deskIds = context.Desks.AsNoTracking().Select(d => d.Id).ToList();
+            var eqIds = context.Equipments.AsNoTracking().Select(e => e.Id).ToList();
+
+            var usedPairs = context.DeskEquipments
+                .AsNoTracking()
+                .Select(de => new { de.DeskId, de.EquipmentId })
+                .AsEnumerable()
+                .Select(x => (x.DeskId, x.EquipmentId))
+                .ToHashSet();
+
+            int maxPossible = deskIds.Count * eqIds.Count;
+            if (count > (maxPossible - usedPairs.Count))
+            {
+                count = maxPossible - usedPairs.Count;
+                Console.WriteLine($"Adjusting count to {count} due to unique constraint limits.");
+            }
+
+            var faker = new Faker();
+            int generatedSoFar = 0;
+
+            while (generatedSoFar < count)
+            {
+                int dId = faker.PickRandom(deskIds);
+                int eId = faker.PickRandom(eqIds);
+
+                if (usedPairs.Add((dId, eId)))
+                {
+                    context.DeskEquipments.Add(new DeskEquipment
+                    {
+                        DeskId = dId,
+                        EquipmentId = eId,
+                        Quantity = faker.Random.Int(1, 3)
+                    });
+
+                    generatedSoFar++;
+
+                    if (generatedSoFar % BatchSize == 0)
+                    {
+                        Console.WriteLine($"Equipment: Progress {generatedSoFar} / {count}...");
+                        SaveAndClear();
+                    }
+                }
+            }
+            SaveAndClear();
+            Console.WriteLine("[SUCCESS] Desk Equipments generated.");
         }
 
         private string HashPassword(string password)
@@ -224,4 +210,3 @@ namespace OfficeDeskReservationDB.Data
         }
     }
 }
-
