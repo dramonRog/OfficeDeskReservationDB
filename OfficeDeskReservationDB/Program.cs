@@ -30,9 +30,10 @@ namespace OfficeDataGenerator
                     Console.WriteLine("3. Import database from JSON");
                     Console.WriteLine("4. Delete entire database (Drop)");
                     Console.WriteLine("5. Create database (EnsureCreated)");
-                    Console.WriteLine("6. Exit");
+                    Console.WriteLine("6. Transform SQL to NoSql Document Database");
+                    Console.WriteLine("7. Exit");
                     Console.WriteLine("======================================");
-                    Console.Write("Select an option (1-6): ");
+                    Console.Write("Select an option (1-7): ");
 
                     string? choice = Console.ReadLine();
 
@@ -109,14 +110,23 @@ namespace OfficeDataGenerator
                             break;
 
                         case "6":
+                            if (!context.Database.CanConnect())
+                            {
+                                Console.WriteLine("\n[ERROR] Database does not exist! Please create it first (Option 5).");
+                                break;
+                            }
+                            DataTransfer.TransformToNoSql(context);
+                            break;
+
+                        case "7":
                             Console.WriteLine("\nExiting the program. Goodbye!");
                             isRunning = false;
                             break;
 
                         default:
-                            Console.WriteLine("\n[ERROR] Invalid option! Please select a number between 1 and 6.");
+                            Console.WriteLine("\n[ERROR] Invalid option! Please select a number between 1 and 7.");
                             break;
-                    }
+                        }
 
                     if (isRunning)
                     {

@@ -1,0 +1,46 @@
+{
+  "UsersCollection": [
+    {
+      "FirstName": "Adam",
+      "LastName": "Nowak",
+      "Email": "adam.nowak@test.com",
+      "RoleName": "User",
+      "DepartmentName": "DepA"
+    },
+    {
+      "FirstName": "Klon",
+      "LastName": "Adama",
+      "Email": "adam.nowak@test.com",
+      "RoleName": "Manager",
+      "DepartmentName": "DepB"
+    }
+  ],
+  "DesksCollection": [
+    {
+      "DeskName": "Biurko_Prezesa_99",
+      "IsActive": true,
+      "RoomName": "Room A",
+      "FloorLevel": 1,
+      "LocationName": "LocA",
+      "AssignedEquipments": []
+    },
+    {
+      "DeskName": "Biurko_Prezesa_99",
+      "IsActive": false,
+      "RoomName": "Room A1",
+      "FloorLevel": 1,
+      "LocationName": "LocA",
+      "AssignedEquipments": []
+    }
+  ],
+  "ReservationsCollection": [],
+  "IssuesCollection": [
+    {
+      "Description": "Zepsuty monitor 4K",
+      "ReportedAt": "2026-03-28T10:00:00",
+      "IsResolved": false,
+      "ReportedBy": "Adam Nowak",
+      "DeskName": "Biurko_Prezesa_99"
+    }
+  ]
+}
