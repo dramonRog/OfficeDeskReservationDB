@@ -18,6 +18,32 @@ namespace OfficeDeskReservationSystemUI
         }
 
         // ==========================================
+        // OPERACJA: TWORZENIE PUSTEJ BAZY
+        // ==========================================
+        private async void OnCreateDatabaseClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                // EnsureCreatedAsync tworzy bazę i tabele na podstawie modeli, jeśli plik nie istnieje
+                bool created = await _context.Database.EnsureCreatedAsync();
+
+                if (created)
+                {
+                    await DisplayAlert("Success", "Empty database and tables created successfully.", "OK");
+                    await Navigation.PopAsync(); // Powrót do strony głównej
+                }
+                else
+                {
+                    await DisplayAlert("Info", "Database already exists and is initialized.", "OK");
+                }
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Error", $"Failed to initialize database: {ex.Message}", "OK");
+            }
+        }
+
+        // ==========================================
         // OPERACJA: USUWANIE BAZY DANYCH
         // ==========================================
         private async void OnDeleteDatabaseClicked(object sender, EventArgs e)
