@@ -1,3 +1,5 @@
 <Solution>
+  <Project Path="OfficeDeskReservation.Core/OfficeDeskReservation.Core.csproj" Id="17fd7605-33d7-42b6-9c70-82301eba3c69" />
   <Project Path="OfficeDeskReservationDB/OfficeDeskReservationDB.csproj" />
+  <Project Path="OfficeDeskReservationSystemUI/OfficeDeskReservationSystemUI.csproj" Id="35e3c220-24b6-4e98-9ec6-6248ae8d6ae1" />
 </Solution>
