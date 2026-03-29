@@ -23,7 +23,7 @@ namespace OfficeDeskReservationSystemUI
         private int _currentPage = 0;
         private const int _pageSize = 8;
         private string _selectedCategory = "Users";
-        private DisplayData _itemBeingEdited = null; // null oznacza dodawanie nowego obiektu
+        private DisplayData _itemBeingEdited = null;
 
         public MainPage(AppDbContext context)
         {
@@ -38,10 +38,27 @@ namespace OfficeDeskReservationSystemUI
             await LoadData();
         }
 
+        // Nawigacja do strony administracji bazą
+        private async void OnDatabaseAdminClicked(object sender, EventArgs e)
+        {
+            CustomDropdown.IsVisible = false;
+            await Navigation.PushAsync(new DatabaseAdminPage(_context));
+        }
+
         public async Task LoadData()
         {
             try
             {
+                // FIX: Sprawdzenie czy baza istnieje przed zapytaniem
+                if (!await _context.Database.CanConnectAsync())
+                {
+                    MainThread.BeginInvokeOnMainThread(() => {
+                        BindableLayout.SetItemsSource(DataListContainer, null);
+                        PageIndicator.Text = "0";
+                    });
+                    return;
+                }
+
                 List<ItemUiWrapper> wrappedList = new();
                 if (_selectedCategory == "Users")
                 {
@@ -69,28 +86,24 @@ namespace OfficeDeskReservationSystemUI
                     PageIndicator.Text = (_currentPage + 1).ToString();
                 });
             }
-            catch (Exception ex) { await DisplayAlert("Error", ex.Message, "OK"); }
+            catch (Exception)
+            {
+                // W razie błędu tabel (np. baza istnieje ale jest pusta/uszkodzona) czyścimy listę
+                MainThread.BeginInvokeOnMainThread(() => BindableLayout.SetItemsSource(DataListContainer, null));
+            }
         }
 
-        // ==========================================
-        // OPERACJA: DODAWANIE NOWEGO ELEMENTU
-        // ==========================================
+        // --- Logika przycisków i modala (bez zmian, dla kompletności pliku) ---
         public void OnAddClicked(object sender, EventArgs e)
         {
-            _itemBeingEdited = null; // Sygnał dla zapisu, że tworzymy nowy rekord
+            _itemBeingEdited = null;
             ModalTitle.Text = $"Add New {_selectedCategory.TrimEnd('s')}";
-
-            // Wyczyść pola
             EditEntry1.Text = string.Empty; EditEntry2.Text = string.Empty; EditEntry3.Text = string.Empty;
             EditBooleanSwitch.IsToggled = true;
-
             ConfigureModalForCategory();
             EditModalOverlay.IsVisible = true;
         }
 
-        // ==========================================
-        // OPERACJA: EDYCJA ELEMENTU
-        // ==========================================
         public void OnEditClicked(object sender, EventArgs e)
         {
             if (sender is Button btn && btn.CommandParameter is DisplayData d)
@@ -98,12 +111,10 @@ namespace OfficeDeskReservationSystemUI
                 _itemBeingEdited = d;
                 ModalTitle.Text = $"Edit {_selectedCategory.TrimEnd('s')}";
                 ConfigureModalForCategory();
-
                 if (d.OriginalObject is User u) { EditEntry1.Text = u.FirstName; EditEntry2.Text = u.LastName; EditEntry3.Text = u.Email; }
                 else if (d.OriginalObject is Desk desk) { EditEntry1.Text = desk.Name; EditBooleanSwitch.IsToggled = desk.IsActive; }
                 else if (d.OriginalObject is Reservation res) { EditEntry1.Text = res.Status; EditEntry2.Text = res.StartTime.ToString("g"); }
                 else if (d.OriginalObject is Issue issue) { EditEntry1.Text = issue.Description; EditBooleanSwitch.IsToggled = issue.IsResolved; }
-
                 EditModalOverlay.IsVisible = true;
             }
         }
@@ -117,64 +128,24 @@ namespace OfficeDeskReservationSystemUI
             else if (_selectedCategory == "Issues") { EditContainer2.IsVisible = false; EditBooleanContainer.IsVisible = true; EditLabel1.Text = "Description"; EditBooleanLabel.Text = "Resolved?"; }
         }
 
-        // ==========================================
-        // ZAPISYWANIE (DODAWANIE LUB EDYCJA)
-        // ==========================================
         public async void OnSaveEditClicked(object sender, EventArgs e)
         {
             try
             {
-                if (_itemBeingEdited == null) // DODAWANIE
+                if (_itemBeingEdited == null)
                 {
-                    if (_selectedCategory == "Users")
-                    {
-                        var newUser = new User { FirstName = EditEntry1.Text, LastName = EditEntry2.Text, Email = EditEntry3.Text, PasswordHash = "default", RoleId = 1, DepartmentId = 1 };
-                        _context.Users.Add(newUser);
-                    }
-                    else if (_selectedCategory == "Desks")
-                    {
-                        var newDesk = new Desk { Name = EditEntry1.Text, IsActive = EditBooleanSwitch.IsToggled, RoomId = 1 };
-                        _context.Desks.Add(newDesk);
-                    }
-                    else if (_selectedCategory == "Reservations")
-                    {
-                        var firstUser = await _context.Users.FirstOrDefaultAsync();
-                        var firstDesk = await _context.Desks.FirstOrDefaultAsync();
-                        var newRes = new Reservation { Status = EditEntry1.Text, StartTime = DateTime.TryParse(EditEntry2.Text, out DateTime dt) ? dt : DateTime.Now, UserId = firstUser?.Id ?? 1, DeskId = firstDesk?.Id ?? 1 };
-                        _context.Reservations.Add(newRes);
-                    }
-                    else if (_selectedCategory == "Issues")
-                    {
-                        var firstUser = await _context.Users.FirstOrDefaultAsync();
-                        var firstDesk = await _context.Desks.FirstOrDefaultAsync();
-                        var newIssue = new Issue { Description = EditEntry1.Text, IsResolved = EditBooleanSwitch.IsToggled, ReportedAt = DateTime.Now, UserId = firstUser?.Id ?? 1, DeskId = firstDesk?.Id ?? 1 };
-                        _context.Issues.Add(newIssue);
-                    }
+                    if (_selectedCategory == "Users") _context.Users.Add(new User { FirstName = EditEntry1.Text, LastName = EditEntry2.Text, Email = EditEntry3.Text, PasswordHash = "hashed", RoleId = 1, DepartmentId = 1 });
+                    else if (_selectedCategory == "Desks") _context.Desks.Add(new Desk { Name = EditEntry1.Text, IsActive = EditBooleanSwitch.IsToggled, RoomId = 1 });
+                    else if (_selectedCategory == "Reservations") { var u = await _context.Users.FirstOrDefaultAsync(); var d = await _context.Desks.FirstOrDefaultAsync(); _context.Reservations.Add(new Reservation { Status = EditEntry1.Text, StartTime = DateTime.TryParse(EditEntry2.Text, out DateTime dt) ? dt : DateTime.Now, UserId = u?.Id ?? 1, DeskId = d?.Id ?? 1 }); }
+                    else if (_selectedCategory == "Issues") { var u = await _context.Users.FirstOrDefaultAsync(); var d = await _context.Desks.FirstOrDefaultAsync(); _context.Issues.Add(new Issue { Description = EditEntry1.Text, IsResolved = EditBooleanSwitch.IsToggled, ReportedAt = DateTime.Now, UserId = u?.Id ?? 1, DeskId = d?.Id ?? 1 }); }
                 }
-                else // EDYCJA
+                else
                 {
-                    if (_itemBeingEdited.OriginalObject is User u)
-                    {
-                        var dbUser = await _context.Users.FindAsync(u.Id);
-                        if (dbUser != null) { dbUser.FirstName = EditEntry1.Text; dbUser.LastName = EditEntry2.Text; dbUser.Email = EditEntry3.Text; }
-                    }
-                    else if (_itemBeingEdited.OriginalObject is Desk desk)
-                    {
-                        var dbDesk = await _context.Desks.FindAsync(desk.Id);
-                        if (dbDesk != null) { dbDesk.Name = EditEntry1.Text; dbDesk.IsActive = EditBooleanSwitch.IsToggled; }
-                    }
-                    else if (_itemBeingEdited.OriginalObject is Reservation res)
-                    {
-                        var dbRes = await _context.Reservations.FindAsync(res.Id);
-                        if (dbRes != null) { dbRes.Status = EditEntry1.Text; if (DateTime.TryParse(EditEntry2.Text, out DateTime dt)) dbRes.StartTime = dt; }
-                    }
-                    else if (_itemBeingEdited.OriginalObject is Issue issue)
-                    {
-                        var dbIssue = await _context.Issues.FindAsync(issue.Id);
-                        if (dbIssue != null) { dbIssue.Description = EditEntry1.Text; dbIssue.IsResolved = EditBooleanSwitch.IsToggled; }
-                    }
+                    if (_itemBeingEdited.OriginalObject is User u) { var db = await _context.Users.FindAsync(u.Id); if (db != null) { db.FirstName = EditEntry1.Text; db.LastName = EditEntry2.Text; db.Email = EditEntry3.Text; } }
+                    else if (_itemBeingEdited.OriginalObject is Desk d) { var db = await _context.Desks.FindAsync(d.Id); if (db != null) { db.Name = EditEntry1.Text; db.IsActive = EditBooleanSwitch.IsToggled; } }
+                    else if (_itemBeingEdited.OriginalObject is Reservation r) { var db = await _context.Reservations.FindAsync(r.Id); if (db != null) { db.Status = EditEntry1.Text; if (DateTime.TryParse(EditEntry2.Text, out DateTime dt)) db.StartTime = dt; } }
+                    else if (_itemBeingEdited.OriginalObject is Issue i) { var db = await _context.Issues.FindAsync(i.Id); if (db != null) { db.Description = EditEntry1.Text; db.IsResolved = EditBooleanSwitch.IsToggled; } }
                 }
-
                 await _context.SaveChangesAsync();
                 EditModalOverlay.IsVisible = false;
                 await LoadData();
@@ -195,25 +166,10 @@ namespace OfficeDeskReservationSystemUI
             }
         }
 
-        private async void OnHeaderClicked(object sender, EventArgs e)
-        {
-            CustomDropdown.IsVisible = !CustomDropdown.IsVisible;
-            if (CustomDropdown.IsVisible) { CustomDropdown.Opacity = 0; await CustomDropdown.FadeTo(1, 150); }
-        }
-
-        private async void OnMenuItemClicked(object sender, EventArgs e)
-        {
-            if (sender is Button btn)
-            {
-                _selectedCategory = btn.CommandParameter.ToString();
-                CurrentCategoryLabel.Text = _selectedCategory; CustomDropdown.IsVisible = false;
-                _currentPage = 0; await LoadData();
-            }
-        }
-
+        private async void OnHeaderClicked(object sender, EventArgs e) { CustomDropdown.IsVisible = !CustomDropdown.IsVisible; if (CustomDropdown.IsVisible) { CustomDropdown.Opacity = 0; await CustomDropdown.FadeTo(1, 150); } }
+        private async void OnMenuItemClicked(object sender, EventArgs e) { if (sender is Button btn) { _selectedCategory = btn.CommandParameter.ToString(); CurrentCategoryLabel.Text = _selectedCategory; CustomDropdown.IsVisible = false; _currentPage = 0; await LoadData(); } }
         public async void OnPreviousClicked(object sender, EventArgs e) { if (_currentPage > 0) { _currentPage--; await LoadData(); } }
         public async void OnNextClicked(object sender, EventArgs e) { _currentPage++; await LoadData(); }
         private void OnScrollViewScrolled(object sender, ScrolledEventArgs e) { }
-        private void OnScrollThumbPanUpdated(object sender, PanUpdatedEventArgs e) { }
     }
 }

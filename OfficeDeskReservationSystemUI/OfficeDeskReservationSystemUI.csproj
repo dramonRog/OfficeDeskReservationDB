@@ -77,4 +77,16 @@
 	  <ProjectReference Include="..\OfficeDeskReservation.Core\OfficeDeskReservation.Core.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Compile Update="DatabaseAdminPage.xaml.cs">
+	    <DependentUpon>DatabaseAdminPage.xaml</DependentUpon>
+	  </Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <MauiXaml Update="DatabaseAdminPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	</ItemGroup>
+
 </Project>
