@@ -17,6 +17,16 @@ namespace OfficeDeskReservationDB.Data
         public DbSet<Reservation> Reservations { get; set; }
         public DbSet<Issue> Issues { get; set; }
 
+        public AppDbContext()
+        {
+
+        }
+
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+        {
+
+        }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

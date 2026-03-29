@@ -1,10 +1,166 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="OfficeDeskReservationSystemUI.MainPage" 
-             Title="Database Manager GUI">
+             xmlns:uranium="http://schemas.enis-necipoglu.com/dotnet/maui/uraniumui"
+             xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+             x:Class="OfficeDeskReservationSystemUI.MainPage"
+             BackgroundColor="#F1F5F9" 
+             NavigationPage.HasNavigationBar="False"
+             Shell.NavBarIsVisible="False">
 
-    <VerticalStackLayout>
-    </VerticalStackLayout>
+    <ContentPage.Resources>
+        <Style x:Key="MenuItemStyle" TargetType="Button">
+            <Setter Property="BackgroundColor" Value="Transparent" />
+            <Setter Property="TextColor" Value="#2B364A" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontAttributes" Value="Bold" />
+            <Setter Property="HorizontalOptions" Value="Fill" />
+            <Setter Property="Padding" Value="0,14" />
+            <Setter Property="CornerRadius" Value="0" />
+        </Style>
 
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="VisualStateManager.VisualStateGroups">
+                <VisualStateGroupList>
+                    <VisualStateGroup x:Name="CommonStates">
+                        <VisualState x:Name="Normal" />
+                        <VisualState x:Name="PointerOver">
+                            <VisualState.Setters>
+                                <Setter Property="Scale" Value="1.15" />
+                                <Setter Property="Opacity" Value="0.75" />
+                            </VisualState.Setters>
+                        </VisualState>
+                    </VisualStateGroup>
+                </VisualStateGroupList>
+            </Setter>
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid>
+        <Grid RowDefinitions="Auto, *, Auto" Padding="20,25,15,15">
+
+            <HorizontalStackLayout Grid.Row="0" Spacing="10" Margin="10,0,0,20">
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnHeaderClicked" />
+                </HorizontalStackLayout.GestureRecognizers>
+
+                <Label x:Name="CurrentCategoryLabel" Text="Users" FontSize="32" FontAttributes="Bold" TextColor="#0F172A" VerticalOptions="Center" />
+                <Label Text="{x:Static fa:Solid.CaretDown}" FontFamily="FASolid" FontSize="18" TextColor="#64748B" VerticalOptions="Center" Margin="0,6,0,0"/>
+            </HorizontalStackLayout>
+
+            <Grid Grid.Row="1" ColumnDefinitions="*, 16" Margin="10,0,0,0">
+
+                <ScrollView x:Name="DataScrollView" 
+                            Grid.Column="0"
+                            VerticalScrollBarVisibility="Never" 
+                            Scrolled="OnScrollViewScrolled">
+
+                    <VerticalStackLayout x:Name="DataListContainer" Spacing="14" Padding="0,0,15,14">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate>
+                                <Border BackgroundColor="#FFFFFF" 
+                                        Stroke="#CBD5E1" 
+                                        StrokeThickness="1" 
+                                        StrokeShape="RoundRectangle 16">
+                                    <Border.Shadow>
+                                        <Shadow Brush="#94A3B8" Offset="0,4" Opacity="0.15" Radius="8" />
+                                    </Border.Shadow>
+
+                                    <Grid ColumnDefinitions="Auto, *, Auto" Padding="15,12,20,12" VerticalOptions="Center">
+
+                                        <Border Grid.Column="0" WidthRequest="40" HeightRequest="40" StrokeShape="RoundRectangle 20" BackgroundColor="#EEF2FF" StrokeThickness="0" VerticalOptions="Center" Margin="0,0,15,0">
+                                            <Label Text="{Binding DisplayIndex}" TextColor="#4F46E5" FontAttributes="Bold" FontSize="15" HorizontalOptions="Center" VerticalOptions="Center" />
+                                        </Border>
+
+                                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                            <Label Text="{Binding Data.FirstName}" FontAttributes="Bold" FontSize="17" TextColor="#1E293B" />
+                                            <Label Text="{Binding Data.Email}" FontSize="13" TextColor="#64748B" Margin="0,2,0,0" />
+                                        </VerticalStackLayout>
+
+                                        <HorizontalStackLayout Grid.Column="2" Spacing="8" VerticalOptions="Center">
+                                            <Button Text="{x:Static fa:Solid.Pencil}" FontFamily="FASolid" Style="{StaticResource ActionButtonStyle}" Clicked="OnEditClicked" CommandParameter="{Binding Data}" BackgroundColor="Transparent" TextColor="#0284C7" FontSize="18" WidthRequest="44" HeightRequest="44" Padding="0" />
+                                            <Button Text="{x:Static fa:Solid.Trash}" FontFamily="FASolid" Style="{StaticResource ActionButtonStyle}" Clicked="OnDeleteClicked" CommandParameter="{Binding Data}" BackgroundColor="Transparent" TextColor="#E11D48" FontSize="18" WidthRequest="44" HeightRequest="44" Padding="0" />
+                                        </HorizontalStackLayout>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </ScrollView>
+
+                <Border x:Name="ScrollTrack" 
+                        Grid.Column="1" 
+                        WidthRequest="10" 
+                        BackgroundColor="#E2E8F0" 
+                        StrokeThickness="0" 
+                        StrokeShape="RoundRectangle 5" 
+                        HorizontalOptions="Center" 
+                        VerticalOptions="Fill"
+                        Margin="0,0,0,14"
+                        IsVisible="False">
+
+                    <Border x:Name="ScrollThumb" 
+                            WidthRequest="10" 
+                            HeightRequest="40" 
+                            BackgroundColor="#94A3B8" 
+                            StrokeThickness="0" 
+                            StrokeShape="RoundRectangle 5" 
+                            VerticalOptions="Start">
+                        <Border.GestureRecognizers>
+                            <PanGestureRecognizer PanUpdated="OnScrollThumbPanUpdated" />
+                        </Border.GestureRecognizers>
+                    </Border>
+                </Border>
+            </Grid>
+
+            <Border Grid.Row="2" 
+                    StrokeShape="RoundRectangle 25" 
+                    BackgroundColor="#DEE2E6" 
+                    StrokeThickness="0"
+                    HorizontalOptions="Center" 
+                    Padding="15,6" 
+                    Margin="0,10,0,0">
+
+                <HorizontalStackLayout Spacing="15" VerticalOptions="Center">
+                    <Button Text="{x:Static fa:Solid.ChevronLeft}" FontFamily="FASolid" BackgroundColor="Transparent" TextColor="#2B364A" WidthRequest="30" Clicked="OnPreviousClicked" Padding="0" FontSize="16" />
+
+                    <Border BackgroundColor="#FFFFFF" StrokeShape="RoundRectangle 18" StrokeThickness="0" WidthRequest="36" HeightRequest="36" VerticalOptions="Center">
+                        <Label x:Name="PageIndicator" Text="1" TextColor="#0F172A" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" FontSize="15" />
+                    </Border>
+
+                    <Button Text="{x:Static fa:Solid.ChevronRight}" FontFamily="FASolid" BackgroundColor="Transparent" TextColor="#2B364A" WidthRequest="30" Clicked="OnNextClicked" Padding="0" FontSize="16" />
+                </HorizontalStackLayout>
+            </Border>
+        </Grid>
+
+        <Border x:Name="CustomDropdown"
+                IsVisible="False"
+                Opacity="0"
+                BackgroundColor="White"
+                Stroke="#CBD5E1"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 16"
+                HorizontalOptions="Start"
+                VerticalOptions="Start"
+                Margin="30,75,0,0"
+                WidthRequest="220"
+                ZIndex="999">
+            <Border.Shadow>
+                <Shadow Brush="#64748B" Offset="0,12" Opacity="0.15" Radius="25" />
+            </Border.Shadow>
+            <VerticalStackLayout Padding="0,5">
+                <Button Text="Users" Style="{StaticResource MenuItemStyle}" Clicked="OnMenuItemClicked" CommandParameter="Users" />
+                <BoxView HeightRequest="1" Color="#E2E8F0" Margin="15,0" />
+
+                <Button Text="Desks" Style="{StaticResource MenuItemStyle}" Clicked="OnMenuItemClicked" CommandParameter="Desks" />
+                <BoxView HeightRequest="1" Color="#E2E8F0" Margin="15,0" />
+
+                <Button Text="Reservations" Style="{StaticResource MenuItemStyle}" Clicked="OnMenuItemClicked" CommandParameter="Reservations" />
+                <BoxView HeightRequest="1" Color="#E2E8F0" Margin="15,0" />
+
+                <Button Text="Issues" Style="{StaticResource MenuItemStyle}" Clicked="OnMenuItemClicked" CommandParameter="Issues" />
+            </VerticalStackLayout>
+        </Border>
+
+    </Grid>
 </ContentPage>
