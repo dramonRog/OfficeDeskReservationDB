@@ -38,13 +38,27 @@
 
     <Grid>
         <Grid RowDefinitions="Auto, *, Auto" Padding="20,25,15,15">
-            <HorizontalStackLayout Grid.Row="0" Spacing="10" Margin="10,0,0,20">
-                <HorizontalStackLayout.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnHeaderClicked" />
-                </HorizontalStackLayout.GestureRecognizers>
-                <Label x:Name="CurrentCategoryLabel" Text="Users" FontSize="32" FontAttributes="Bold" TextColor="#0F172A" VerticalOptions="Center" />
-                <Label Text="{x:Static fa:Solid.CaretDown}" FontFamily="FASolid" FontSize="18" TextColor="#64748B" VerticalOptions="Center" Margin="0,6,0,0"/>
-            </HorizontalStackLayout>
+            <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="10,0,0,20">
+                <HorizontalStackLayout Grid.Column="0" Spacing="10">
+                    <HorizontalStackLayout.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnHeaderClicked" />
+                    </HorizontalStackLayout.GestureRecognizers>
+                    <Label x:Name="CurrentCategoryLabel" Text="Users" FontSize="32" FontAttributes="Bold" TextColor="#0F172A" VerticalOptions="Center" />
+                    <Label Text="{x:Static fa:Solid.CaretDown}" FontFamily="FASolid" FontSize="18" TextColor="#64748B" VerticalOptions="Center" Margin="0,6,0,0"/>
+                </HorizontalStackLayout>
+
+                <Button Grid.Column="1" 
+                        Text="{x:Static fa:Solid.Plus}" 
+                        FontFamily="FASolid" 
+                        FontSize="20" 
+                        BackgroundColor="#4F46E5" 
+                        TextColor="White" 
+                        HeightRequest="44" 
+                        WidthRequest="44" 
+                        CornerRadius="22" 
+                        Padding="0"
+                        Clicked="OnAddClicked" />
+            </Grid>
 
             <Grid Grid.Row="1" ColumnDefinitions="*, 16" Margin="10,0,0,0">
                 <ScrollView x:Name="DataScrollView" Grid.Column="0" VerticalScrollBarVisibility="Never" Scrolled="OnScrollViewScrolled">
@@ -110,7 +124,7 @@
                     <TapGestureRecognizer />
                 </Border.GestureRecognizers>
                 <VerticalStackLayout Spacing="15">
-                    <Label Text="Edit Information" FontSize="20" FontAttributes="Bold" TextColor="#0F172A" Margin="0,0,0,5" />
+                    <Label x:Name="ModalTitle" Text="Information" FontSize="20" FontAttributes="Bold" TextColor="#0F172A" Margin="0,0,0,5" />
 
                     <VerticalStackLayout x:Name="EditContainer1">
                         <Label x:Name="EditLabel1" Text="Primary" FontSize="13" TextColor="#64748B" Margin="0,0,0,5" FontAttributes="Bold"/>
@@ -140,7 +154,7 @@
 
                     <HorizontalStackLayout Spacing="10" HorizontalOptions="End" Margin="0,15,0,0">
                         <Button Text="Cancel" BackgroundColor="Transparent" TextColor="#64748B" FontAttributes="Bold" Clicked="OnCancelEditClicked" />
-                        <Button Text="Save Changes" BackgroundColor="#4F46E5" TextColor="White" FontAttributes="Bold" CornerRadius="8" Padding="20,0" Clicked="OnSaveEditClicked" />
+                        <Button Text="Save" BackgroundColor="#4F46E5" TextColor="White" FontAttributes="Bold" CornerRadius="8" Padding="20,0" Clicked="OnSaveEditClicked" />
                     </HorizontalStackLayout>
                 </VerticalStackLayout>
             </Border>

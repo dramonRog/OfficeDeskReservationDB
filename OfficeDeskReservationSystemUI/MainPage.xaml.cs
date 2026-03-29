@@ -23,7 +23,7 @@ namespace OfficeDeskReservationSystemUI
         private int _currentPage = 0;
         private const int _pageSize = 8;
         private string _selectedCategory = "Users";
-        private DisplayData _itemBeingEdited;
+        private DisplayData _itemBeingEdited = null; // null oznacza dodawanie nowego obiektu
 
         public MainPage(AppDbContext context)
         {
@@ -72,69 +72,114 @@ namespace OfficeDeskReservationSystemUI
             catch (Exception ex) { await DisplayAlert("Error", ex.Message, "OK"); }
         }
 
+        // ==========================================
+        // OPERACJA: DODAWANIE NOWEGO ELEMENTU
+        // ==========================================
+        public void OnAddClicked(object sender, EventArgs e)
+        {
+            _itemBeingEdited = null; // Sygnał dla zapisu, że tworzymy nowy rekord
+            ModalTitle.Text = $"Add New {_selectedCategory.TrimEnd('s')}";
+
+            // Wyczyść pola
+            EditEntry1.Text = string.Empty; EditEntry2.Text = string.Empty; EditEntry3.Text = string.Empty;
+            EditBooleanSwitch.IsToggled = true;
+
+            ConfigureModalForCategory();
+            EditModalOverlay.IsVisible = true;
+        }
+
+        // ==========================================
+        // OPERACJA: EDYCJA ELEMENTU
+        // ==========================================
         public void OnEditClicked(object sender, EventArgs e)
         {
             if (sender is Button btn && btn.CommandParameter is DisplayData d)
             {
                 _itemBeingEdited = d;
-                EditContainer2.IsVisible = true; EditContainer3.IsVisible = false; EditBooleanContainer.IsVisible = false;
+                ModalTitle.Text = $"Edit {_selectedCategory.TrimEnd('s')}";
+                ConfigureModalForCategory();
 
-                if (_selectedCategory == "Users" && d.OriginalObject is User u)
-                {
-                    EditContainer3.IsVisible = true; EditLabel1.Text = "First Name"; EditLabel2.Text = "Last Name"; EditLabel3.Text = "Email";
-                    EditEntry1.Text = u.FirstName; EditEntry2.Text = u.LastName; EditEntry3.Text = u.Email;
-                }
-                else if (_selectedCategory == "Desks" && d.OriginalObject is Desk desk)
-                {
-                    EditContainer2.IsVisible = false; EditBooleanContainer.IsVisible = true; EditLabel1.Text = "Desk Name"; EditBooleanLabel.Text = "Is Active?";
-                    EditEntry1.Text = desk.Name; EditBooleanSwitch.IsToggled = desk.IsActive;
-                }
-                else if (_selectedCategory == "Reservations" && d.OriginalObject is Reservation res)
-                {
-                    EditLabel1.Text = "Status"; EditLabel2.Text = "Start Time (yyyy-MM-dd HH:mm)";
-                    EditEntry1.Text = res.Status; EditEntry2.Text = res.StartTime.ToString("g");
-                }
-                else if (_selectedCategory == "Issues" && d.OriginalObject is Issue issue)
-                {
-                    EditContainer2.IsVisible = false; EditBooleanContainer.IsVisible = true; EditLabel1.Text = "Description"; EditBooleanLabel.Text = "Resolved?";
-                    EditEntry1.Text = issue.Description; EditBooleanSwitch.IsToggled = issue.IsResolved;
-                }
+                if (d.OriginalObject is User u) { EditEntry1.Text = u.FirstName; EditEntry2.Text = u.LastName; EditEntry3.Text = u.Email; }
+                else if (d.OriginalObject is Desk desk) { EditEntry1.Text = desk.Name; EditBooleanSwitch.IsToggled = desk.IsActive; }
+                else if (d.OriginalObject is Reservation res) { EditEntry1.Text = res.Status; EditEntry2.Text = res.StartTime.ToString("g"); }
+                else if (d.OriginalObject is Issue issue) { EditEntry1.Text = issue.Description; EditBooleanSwitch.IsToggled = issue.IsResolved; }
+
                 EditModalOverlay.IsVisible = true;
             }
         }
 
+        private void ConfigureModalForCategory()
+        {
+            EditContainer2.IsVisible = true; EditContainer3.IsVisible = false; EditBooleanContainer.IsVisible = false;
+            if (_selectedCategory == "Users") { EditContainer3.IsVisible = true; EditLabel1.Text = "First Name"; EditLabel2.Text = "Last Name"; EditLabel3.Text = "Email"; }
+            else if (_selectedCategory == "Desks") { EditContainer2.IsVisible = false; EditBooleanContainer.IsVisible = true; EditLabel1.Text = "Desk Name"; EditBooleanLabel.Text = "Is Active?"; }
+            else if (_selectedCategory == "Reservations") { EditLabel1.Text = "Status"; EditLabel2.Text = "Start Time (yyyy-MM-dd HH:mm)"; }
+            else if (_selectedCategory == "Issues") { EditContainer2.IsVisible = false; EditBooleanContainer.IsVisible = true; EditLabel1.Text = "Description"; EditBooleanLabel.Text = "Resolved?"; }
+        }
+
+        // ==========================================
+        // ZAPISYWANIE (DODAWANIE LUB EDYCJA)
+        // ==========================================
         public async void OnSaveEditClicked(object sender, EventArgs e)
         {
-            if (_itemBeingEdited?.OriginalObject == null) return;
             try
             {
-                // ROZWIĄZANIE PROBLEMU TRACKINGU: Pobieramy encję bezpośrenio z kontekstu wg ID
-                if (_itemBeingEdited.OriginalObject is User u)
+                if (_itemBeingEdited == null) // DODAWANIE
                 {
-                    var dbUser = await _context.Users.FindAsync(u.Id);
-                    if (dbUser != null) { dbUser.FirstName = EditEntry1.Text; dbUser.LastName = EditEntry2.Text; dbUser.Email = EditEntry3.Text; }
+                    if (_selectedCategory == "Users")
+                    {
+                        var newUser = new User { FirstName = EditEntry1.Text, LastName = EditEntry2.Text, Email = EditEntry3.Text, PasswordHash = "default", RoleId = 1, DepartmentId = 1 };
+                        _context.Users.Add(newUser);
+                    }
+                    else if (_selectedCategory == "Desks")
+                    {
+                        var newDesk = new Desk { Name = EditEntry1.Text, IsActive = EditBooleanSwitch.IsToggled, RoomId = 1 };
+                        _context.Desks.Add(newDesk);
+                    }
+                    else if (_selectedCategory == "Reservations")
+                    {
+                        var firstUser = await _context.Users.FirstOrDefaultAsync();
+                        var firstDesk = await _context.Desks.FirstOrDefaultAsync();
+                        var newRes = new Reservation { Status = EditEntry1.Text, StartTime = DateTime.TryParse(EditEntry2.Text, out DateTime dt) ? dt : DateTime.Now, UserId = firstUser?.Id ?? 1, DeskId = firstDesk?.Id ?? 1 };
+                        _context.Reservations.Add(newRes);
+                    }
+                    else if (_selectedCategory == "Issues")
+                    {
+                        var firstUser = await _context.Users.FirstOrDefaultAsync();
+                        var firstDesk = await _context.Desks.FirstOrDefaultAsync();
+                        var newIssue = new Issue { Description = EditEntry1.Text, IsResolved = EditBooleanSwitch.IsToggled, ReportedAt = DateTime.Now, UserId = firstUser?.Id ?? 1, DeskId = firstDesk?.Id ?? 1 };
+                        _context.Issues.Add(newIssue);
+                    }
                 }
-                else if (_itemBeingEdited.OriginalObject is Desk desk)
+                else // EDYCJA
                 {
-                    var dbDesk = await _context.Desks.FindAsync(desk.Id);
-                    if (dbDesk != null) { dbDesk.Name = EditEntry1.Text; dbDesk.IsActive = EditBooleanSwitch.IsToggled; }
-                }
-                else if (_itemBeingEdited.OriginalObject is Reservation res)
-                {
-                    var dbRes = await _context.Reservations.FindAsync(res.Id);
-                    if (dbRes != null) { dbRes.Status = EditEntry1.Text; if (DateTime.TryParse(EditEntry2.Text, out DateTime dt)) dbRes.StartTime = dt; }
-                }
-                else if (_itemBeingEdited.OriginalObject is Issue issue)
-                {
-                    var dbIssue = await _context.Issues.FindAsync(issue.Id);
-                    if (dbIssue != null) { dbIssue.Description = EditEntry1.Text; dbIssue.IsResolved = EditBooleanSwitch.IsToggled; }
+                    if (_itemBeingEdited.OriginalObject is User u)
+                    {
+                        var dbUser = await _context.Users.FindAsync(u.Id);
+                        if (dbUser != null) { dbUser.FirstName = EditEntry1.Text; dbUser.LastName = EditEntry2.Text; dbUser.Email = EditEntry3.Text; }
+                    }
+                    else if (_itemBeingEdited.OriginalObject is Desk desk)
+                    {
+                        var dbDesk = await _context.Desks.FindAsync(desk.Id);
+                        if (dbDesk != null) { dbDesk.Name = EditEntry1.Text; dbDesk.IsActive = EditBooleanSwitch.IsToggled; }
+                    }
+                    else if (_itemBeingEdited.OriginalObject is Reservation res)
+                    {
+                        var dbRes = await _context.Reservations.FindAsync(res.Id);
+                        if (dbRes != null) { dbRes.Status = EditEntry1.Text; if (DateTime.TryParse(EditEntry2.Text, out DateTime dt)) dbRes.StartTime = dt; }
+                    }
+                    else if (_itemBeingEdited.OriginalObject is Issue issue)
+                    {
+                        var dbIssue = await _context.Issues.FindAsync(issue.Id);
+                        if (dbIssue != null) { dbIssue.Description = EditEntry1.Text; dbIssue.IsResolved = EditBooleanSwitch.IsToggled; }
+                    }
                 }
 
                 await _context.SaveChangesAsync();
                 EditModalOverlay.IsVisible = false;
                 await LoadData();
             }
-            catch (Exception ex) { await DisplayAlert("Save Error", ex.Message, "OK"); }
+            catch (Exception ex) { await DisplayAlert("Error", ex.Message, "OK"); }
         }
 
         public void OnCancelEditClicked(object sender, EventArgs e) => EditModalOverlay.IsVisible = false;
