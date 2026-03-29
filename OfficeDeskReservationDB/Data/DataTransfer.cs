@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MongoDB.Driver;
+using System.Diagnostics;
 
 namespace OfficeDeskReservationDB.Data
 {

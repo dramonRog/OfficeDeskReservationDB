@@ -1,4 +1,7 @@
-﻿namespace OfficeDeskReservationDB.Models
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+
+namespace OfficeDeskReservationDB.Models
 {
     public class NoSqlUser
     {
@@ -21,6 +24,9 @@
 
     public class NoSqlReservation
     {
+        [BsonId] 
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string? Id { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public string UserFullName { get; set; } = string.Empty;

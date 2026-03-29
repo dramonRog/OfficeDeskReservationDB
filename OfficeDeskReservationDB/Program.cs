@@ -1,4 +1,5 @@
 ﻿using OfficeDeskReservationDB.Data;
+using OfficeDeskReservationDB.Testing;
 using System;
 using System.IO;
 
@@ -31,7 +32,8 @@ namespace OfficeDataGenerator
                     Console.WriteLine("4. Delete entire database (Drop)");
                     Console.WriteLine("5. Create database (EnsureCreated)");
                     Console.WriteLine("6. Transform SQL to NoSql Document Database");
-                    Console.WriteLine("7. Exit");
+                    Console.WriteLine("7. Run performance tests");
+                    Console.WriteLine("8. Exit");
                     Console.WriteLine("======================================");
                     Console.Write("Select an option (1-7): ");
 
@@ -119,6 +121,15 @@ namespace OfficeDataGenerator
                             break;
 
                         case "7":
+                            if (!context.Database.CanConnect())
+                            {
+                                Console.WriteLine("\n[ERROR] Database does not exist");
+                                break;
+                            }
+                            PerformanceBenchmarker.RunPerformanceMenu(context);
+                            break;
+
+                        case "8":
                             Console.WriteLine("\nExiting the program. Goodbye!");
                             isRunning = false;
                             break;
