@@ -56,11 +56,11 @@ namespace OfficeDataGenerator
                             else
                             {
                                 Generator dataGenerator = new Generator(context);
-                                dataGenerator.GenerateDesks(count, context);
-                                dataGenerator.GenerateDeskEquipments(count, context);
-                                dataGenerator.GenerateUsers(count, context);
-                                dataGenerator.GenerateIssues(count, context);
-                                dataGenerator.GenerateReservations(count, context);
+                                dataGenerator.GenerateDesks(count);
+                                dataGenerator.GenerateDeskEquipments(count);
+                                dataGenerator.GenerateUsers(count);
+                                dataGenerator.GenerateIssues(count);
+                                dataGenerator.GenerateReservations(count);
                                 Console.WriteLine("\n[SUCCESS] Random data generation completed.");
                             }
                             break;

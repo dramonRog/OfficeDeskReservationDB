@@ -60,6 +60,41 @@
                 </Border>
 
                 <Border BackgroundColor="#FFFFFF" 
+                        Stroke="#059669" 
+                        StrokeThickness="1" 
+                        StrokeShape="RoundRectangle 12">
+                    <VerticalStackLayout Padding="20" Spacing="15">
+                        <Grid ColumnDefinitions="*, Auto">
+                            <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                                <Label Text="Data Generator" 
+                                       FontAttributes="Bold" 
+                                       FontSize="16" 
+                                       TextColor="#059669" />
+                                <Label Text="Populate database with random test records." 
+                                       FontSize="12" 
+                                       TextColor="#64748B" />
+                            </VerticalStackLayout>
+                            <Button Grid.Column="1" 
+                                    Text="{x:Static fa:Solid.Gears}" 
+                                    FontFamily="FASolid" 
+                                    BackgroundColor="#ECFDF5" 
+                                    TextColor="#059669" 
+                                    WidthRequest="44" 
+                                    HeightRequest="44" 
+                                    CornerRadius="22" 
+                                    Clicked="OnGenerateDataClicked" />
+                        </Grid>
+
+                        <HorizontalStackLayout Spacing="10">
+                            <Label Text="Count:" VerticalOptions="Center" TextColor="#1E293B" FontAttributes="Bold" />
+                            <Border BackgroundColor="#F8FAFC" Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 8" WidthRequest="100" Padding="10,0">
+                                <Entry x:Name="GenCountEntry" Text="50" Keyboard="Numeric" HorizontalTextAlignment="Center" TextColor="#1E293B" BackgroundColor="Transparent" />
+                            </Border>
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border BackgroundColor="#FFFFFF" 
                         Stroke="#E11D48" 
                         StrokeThickness="1" 
                         StrokeShape="RoundRectangle 12">
@@ -84,11 +119,6 @@
                                 Clicked="OnDeleteDatabaseClicked" />
                     </Grid>
                 </Border>
-
-                <Label Text="More operations coming soon..." 
-                       HorizontalOptions="Center" 
-                       TextColor="#94A3B8" 
-                       Margin="0,20"/>
 
             </VerticalStackLayout>
         </ScrollView>

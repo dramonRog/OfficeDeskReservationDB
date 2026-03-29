@@ -18,28 +18,65 @@ namespace OfficeDeskReservationSystemUI
         }
 
         // ==========================================
-        // OPERACJA: TWORZENIE PUSTEJ BAZY
+        // OPERACJA: UTWORZENIE PUSTEJ BAZY
         // ==========================================
         private async void OnCreateDatabaseClicked(object sender, EventArgs e)
         {
             try
             {
-                // EnsureCreatedAsync tworzy bazę i tabele na podstawie modeli, jeśli plik nie istnieje
                 bool created = await _context.Database.EnsureCreatedAsync();
-
                 if (created)
                 {
                     await DisplayAlert("Success", "Empty database and tables created successfully.", "OK");
-                    await Navigation.PopAsync(); // Powrót do strony głównej
+                    await Navigation.PopAsync();
                 }
                 else
                 {
-                    await DisplayAlert("Info", "Database already exists and is initialized.", "OK");
+                    await DisplayAlert("Info", "Database already exists.", "OK");
                 }
             }
             catch (Exception ex)
             {
-                await DisplayAlert("Error", $"Failed to initialize database: {ex.Message}", "OK");
+                await DisplayAlert("Error", $"Failed to initialize: {ex.Message}", "OK");
+            }
+        }
+
+        // ==========================================
+        // OPERACJA: GENERATOR DANYCH
+        // ==========================================
+        private async void OnGenerateDataClicked(object sender, EventArgs e)
+        {
+            // 1. Walidacja wejścia
+            if (!int.TryParse(GenCountEntry.Text, out int count) || count <= 0)
+            {
+                await DisplayAlert("Invalid Input", "Please enter a valid positive number.", "OK");
+                return;
+            }
+
+            if (!await _context.Database.CanConnectAsync())
+            {
+                await DisplayAlert("Error", "Database does not exist. Create it first.", "OK");
+                return;
+            }
+
+            try
+            {
+                await Task.Run(() =>
+                {
+                    var generator = new Generator(_context);
+
+                    generator.GenerateUsers(count);
+                    generator.GenerateDesks(count);
+                    generator.GenerateReservations(count);
+                    generator.GenerateIssues(count);
+                });
+
+                await DisplayAlert("Success", $"Successfully generated {count} records for each category.", "OK");
+                await Navigation.PopAsync(); 
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Generation Error", $"Failed: {ex.Message}", "OK");
             }
         }
 
@@ -50,36 +87,31 @@ namespace OfficeDeskReservationSystemUI
         {
             try
             {
-                // Sprawdzenie, czy połączenie z bazą jest możliwe (czy plik istnieje)
                 bool exists = await _context.Database.CanConnectAsync();
 
                 if (!exists)
                 {
-                    await DisplayAlert("Info", "Database does not exist. There is nothing to delete.", "OK");
+                    await DisplayAlert("Info", "Database does not exist.", "OK");
                     return;
                 }
 
-                // Potwierdzenie krytycznej operacji
                 bool confirm = await DisplayAlert("CRITICAL ACTION",
-                    "Are you absolutely sure you want to DELETE the entire database? This action is irreversible.",
+                    "Are you absolutely sure you want to DELETE the entire database?",
                     "YES, DELETE", "CANCEL");
 
                 if (confirm)
                 {
-                    // Fizyczne usunięcie bazy danych
                     bool deleted = await _context.Database.EnsureDeletedAsync();
-
                     if (deleted)
                     {
-                        await DisplayAlert("Success", "Database has been deleted successfully.", "OK");
-                        // Powrót do strony głównej po usunięciu
+                        await DisplayAlert("Success", "Database has been deleted.", "OK");
                         await Navigation.PopAsync();
                     }
                 }
             }
             catch (Exception ex)
             {
-                await DisplayAlert("Error", $"An error occurred: {ex.Message}", "OK");
+                await DisplayAlert("Error", ex.Message, "OK");
             }
         }
     }

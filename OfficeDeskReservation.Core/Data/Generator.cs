@@ -22,12 +22,12 @@ namespace OfficeDeskReservationDB.Data
             _context.ChangeTracker.Clear();
         }
 
-        public void GenerateDesks(int count, AppDbContext context)
+        public void GenerateDesks(int count)
         {
-            var roomIds = context.Rooms.AsNoTracking().Select(r => r.Id).ToList();
+            var roomIds = _context.Rooms.AsNoTracking().Select(r => r.Id).ToList();
             if (!roomIds.Any()) return;
 
-            HashSet<string> existingNames = context.Desks.AsNoTracking().Select(d => d.Name).ToHashSet();
+            HashSet<string> existingNames = _context.Desks.AsNoTracking().Select(d => d.Name).ToHashSet();
 
             var faker = new Faker();
             for (int i = 1; i <= count; i++)
@@ -40,7 +40,7 @@ namespace OfficeDeskReservationDB.Data
 
                 existingNames.Add(name);
 
-                context.Desks.Add(new Desk
+                _context.Desks.Add(new Desk
                 {
                     Name = name,
                     IsActive = faker.Random.Bool(0.8f),
@@ -56,11 +56,11 @@ namespace OfficeDeskReservationDB.Data
             SaveAndClear();
         }
 
-        public void GenerateUsers(int count, AppDbContext context)
+        public void GenerateUsers(int count)
         {
-            var roleIds = context.Roles.AsNoTracking().Select(r => r.Id).ToList();
-            var deptIds = context.Departments.AsNoTracking().Select(d => d.Id).ToList();
-            HashSet<string> existingEmails = context.Users.AsNoTracking().Select(u => u.Email).ToHashSet();
+            var roleIds = _context.Roles.AsNoTracking().Select(r => r.Id).ToList();
+            var deptIds = _context.Departments.AsNoTracking().Select(d => d.Id).ToList();
+            HashSet<string> existingEmails = _context.Users.AsNoTracking().Select(u => u.Email).ToHashSet();
 
             var faker = new Faker();
             for (int i = 1; i <= count; i++)
@@ -72,7 +72,7 @@ namespace OfficeDeskReservationDB.Data
                 } while (existingEmails.Contains(email));
                 existingEmails.Add(email);
 
-                context.Users.Add(new User
+                _context.Users.Add(new User
                 {
                     FirstName = faker.Name.FirstName(),
                     LastName = faker.Name.LastName(),
@@ -91,10 +91,10 @@ namespace OfficeDeskReservationDB.Data
             SaveAndClear();
         }
 
-        public void GenerateReservations(int count, AppDbContext context)
+        public void GenerateReservations(int count)
         {
-            var userIds = context.Users.AsNoTracking().Select(u => u.Id).ToList();
-            var deskIds = context.Desks.AsNoTracking().Select(d => d.Id).ToList();
+            var userIds = _context.Users.AsNoTracking().Select(u => u.Id).ToList();
+            var deskIds = _context.Desks.AsNoTracking().Select(d => d.Id).ToList();
 
             var deskAvailability = deskIds.ToDictionary(id => id, _ => DateTime.Now.AddDays(1).Date.AddHours(8));
 
@@ -106,7 +106,7 @@ namespace OfficeDeskReservationDB.Data
                 DateTime end = start.AddHours(2);
                 deskAvailability[deskId] = start.AddHours(4); 
 
-                context.Reservations.Add(new Reservation
+                _context.Reservations.Add(new Reservation
                 {
                     UserId = faker.PickRandom(userIds),
                     DeskId = deskId,
@@ -124,15 +124,15 @@ namespace OfficeDeskReservationDB.Data
             SaveAndClear();
         }
 
-        public void GenerateIssues(int count, AppDbContext context)
+        public void GenerateIssues(int count)
         {
-            var userIds = context.Users.AsNoTracking().Select(u => u.Id).ToList();
-            var deskIds = context.Desks.AsNoTracking().Select(d => d.Id).ToList();
+            var userIds = _context.Users.AsNoTracking().Select(u => u.Id).ToList();
+            var deskIds = _context.Desks.AsNoTracking().Select(d => d.Id).ToList();
             var faker = new Faker();
 
             for (int i = 1; i <= count; i++)
             {
-                context.Issues.Add(new Issue
+                _context.Issues.Add(new Issue
                 {
                     UserId = faker.PickRandom(userIds),
                     DeskId = faker.PickRandom(deskIds),
@@ -150,13 +150,13 @@ namespace OfficeDeskReservationDB.Data
             SaveAndClear();
         }
 
-        public void GenerateDeskEquipments(int count, AppDbContext context)
+        public void GenerateDeskEquipments(int count)
         {
             Console.WriteLine("Loading existing equipment assignments from DB...");
-            var deskIds = context.Desks.AsNoTracking().Select(d => d.Id).ToList();
-            var eqIds = context.Equipments.AsNoTracking().Select(e => e.Id).ToList();
+            var deskIds = _context.Desks.AsNoTracking().Select(d => d.Id).ToList();
+            var eqIds = _context.Equipments.AsNoTracking().Select(e => e.Id).ToList();
 
-            var usedPairs = context.DeskEquipments
+            var usedPairs = _context.DeskEquipments
                 .AsNoTracking()
                 .Select(de => new { de.DeskId, de.EquipmentId })
                 .AsEnumerable()
@@ -180,7 +180,7 @@ namespace OfficeDeskReservationDB.Data
 
                 if (usedPairs.Add((dId, eId)))
                 {
-                    context.DeskEquipments.Add(new DeskEquipment
+                    _context.DeskEquipments.Add(new DeskEquipment
                     {
                         DeskId = dId,
                         EquipmentId = eId,
