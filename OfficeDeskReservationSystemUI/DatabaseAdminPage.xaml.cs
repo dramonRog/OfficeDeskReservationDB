@@ -89,6 +89,31 @@ namespace OfficeDeskReservationSystemUI
         }
 
         // ==========================================
+        // OPERACJA: TRANSFORMACJA NoSQL (MongoDB)
+        // ==========================================
+        private async void OnTransformToNoSqlClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                // Sprawdzenie czy baza SQL jest dostępna
+                if (!await _context.Database.CanConnectAsync())
+                {
+                    await DisplayAlert("Error", "SQL Database not found. Create it and add data first.", "OK");
+                    return;
+                }
+
+                // Wywołanie gotowej metody transformacji z DataTransfer.cs
+                await Task.Run(() => DataTransfer.TransformToNoSql(_context));
+
+                await DisplayAlert("NoSQL Success", "Data denormalized and migrated to local MongoDB instance successfully.", "OK");
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("NoSQL Error", $"Failed to transform: {ex.Message}", "OK");
+            }
+        }
+
+        // ==========================================
         // OPERACJA: USUWANIE BAZY
         // ==========================================
         private async void OnDeleteDatabaseClicked(object sender, EventArgs e)
