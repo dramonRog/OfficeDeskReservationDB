@@ -12,10 +12,7 @@ namespace OfficeDeskReservationSystemUI
             _context = context;
         }
 
-        private async void OnBackClicked(object sender, EventArgs e)
-        {
-            await Navigation.PopAsync();
-        }
+        private async void OnBackClicked(object sender, EventArgs e) => await Navigation.PopAsync();
 
         // ==========================================
         // OPERACJA: UTWORZENIE PUSTEJ BAZY
@@ -25,20 +22,10 @@ namespace OfficeDeskReservationSystemUI
             try
             {
                 bool created = await _context.Database.EnsureCreatedAsync();
-                if (created)
-                {
-                    await DisplayAlert("Success", "Empty database and tables created successfully.", "OK");
-                    await Navigation.PopAsync();
-                }
-                else
-                {
-                    await DisplayAlert("Info", "Database already exists.", "OK");
-                }
+                await DisplayAlert(created ? "Success" : "Info", created ? "Empty database and tables created successfully." : "Database already exists.", "OK");
+                if (created) await Navigation.PopAsync();
             }
-            catch (Exception ex)
-            {
-                await DisplayAlert("Error", $"Failed to initialize: {ex.Message}", "OK");
-            }
+            catch (Exception ex) { await DisplayAlert("Error", $"Failed to initialize: {ex.Message}", "OK"); }
         }
 
         // ==========================================
@@ -46,72 +33,80 @@ namespace OfficeDeskReservationSystemUI
         // ==========================================
         private async void OnGenerateDataClicked(object sender, EventArgs e)
         {
-            // 1. Walidacja wejścia
             if (!int.TryParse(GenCountEntry.Text, out int count) || count <= 0)
             {
                 await DisplayAlert("Invalid Input", "Please enter a valid positive number.", "OK");
                 return;
             }
-
-            if (!await _context.Database.CanConnectAsync())
-            {
-                await DisplayAlert("Error", "Database does not exist. Create it first.", "OK");
-                return;
-            }
-
             try
             {
-                await Task.Run(() =>
-                {
-                    var generator = new Generator(_context);
-
-                    generator.GenerateUsers(count);
-                    generator.GenerateDesks(count);
-                    generator.GenerateReservations(count);
-                    generator.GenerateIssues(count);
+                await Task.Run(() => {
+                    var gen = new Generator(_context);
+                    gen.GenerateUsers(count);
+                    gen.GenerateDesks(count);
+                    gen.GenerateReservations(count);
+                    gen.GenerateIssues(count);
                 });
-
-                await DisplayAlert("Success", $"Successfully generated {count} records for each category.", "OK");
-                await Navigation.PopAsync(); 
+                await DisplayAlert("Success", $"Successfully generated {count} records per category.", "OK");
+                await Navigation.PopAsync();
             }
-            catch (Exception ex)
-            {
-                await DisplayAlert("Generation Error", $"Failed: {ex.Message}", "OK");
-            }
+            catch (Exception ex) { await DisplayAlert("Error", ex.Message, "OK"); }
         }
 
         // ==========================================
-        // OPERACJA: USUWANIE BAZY DANYCH
+        // EXPORT: Zapisuje w root projektu
         // ==========================================
-        private async void OnDeleteDatabaseClicked(object sender, EventArgs e)
+        private async void OnExportClicked(object sender, EventArgs e)
         {
             try
             {
-                bool exists = await _context.Database.CanConnectAsync();
+                string binDir = AppDomain.CurrentDomain.BaseDirectory;
+                string projectRoot = Directory.GetParent(binDir).Parent.Parent.Parent.FullName;
+                string path = Path.Combine(projectRoot, "database_backup.json");
 
-                if (!exists)
+                await Task.Run(() => DataTransfer.ExportDatabaseToJson(_context, path));
+                await DisplayAlert("Export Success", $"File saved to project root:\n{path}", "OK");
+            }
+            catch (Exception ex) { await DisplayAlert("Export Error", ex.Message, "OK"); }
+        }
+
+        // ==========================================
+        // IMPORT: Z podsumowaniem dodanych rekordów
+        // ==========================================
+        private async void OnImportClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                var result = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Select JSON Database File" });
+                if (result != null)
                 {
-                    await DisplayAlert("Info", "Database does not exist.", "OK");
-                    return;
-                }
-
-                bool confirm = await DisplayAlert("CRITICAL ACTION",
-                    "Are you absolutely sure you want to DELETE the entire database?",
-                    "YES, DELETE", "CANCEL");
-
-                if (confirm)
-                {
-                    bool deleted = await _context.Database.EnsureDeletedAsync();
-                    if (deleted)
-                    {
-                        await DisplayAlert("Success", "Database has been deleted.", "OK");
-                        await Navigation.PopAsync();
-                    }
+                    string summary = await Task.Run(() => DataTransfer.ImportDatabaseFromJson(_context, result.FullPath));
+                    await DisplayAlert("Import Result", summary, "OK");
+                    await Navigation.PopAsync();
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) { await DisplayAlert("Import Error", ex.Message, "OK"); }
+        }
+
+        // ==========================================
+        // OPERACJA: USUWANIE BAZY
+        // ==========================================
+        private async void OnDeleteDatabaseClicked(object sender, EventArgs e)
+        {
+            if (!await _context.Database.CanConnectAsync())
             {
-                await DisplayAlert("Error", ex.Message, "OK");
+                await DisplayAlert("Info", "Database does not exist.", "OK");
+                return;
+            }
+            if (await DisplayAlert("CRITICAL ACTION", "Delete entire database? This is irreversible.", "YES, DELETE", "CANCEL"))
+            {
+                try
+                {
+                    await _context.Database.EnsureDeletedAsync();
+                    await DisplayAlert("Success", "Database wiped successfully.", "OK");
+                    await Navigation.PopAsync();
+                }
+                catch (Exception ex) { await DisplayAlert("Error", ex.Message, "OK"); }
             }
         }
     }
