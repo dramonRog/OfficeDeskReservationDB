@@ -1,4 +1,8 @@
-﻿using OfficeDeskReservationDB.Data;
+﻿using System.Reflection;
+using System.Text;
+using MongoDB.Driver;
+using OfficeDeskReservationDB.Data;
+using OfficeDeskReservationDB.Testing;
 
 namespace OfficeDeskReservationSystemUI
 {
@@ -145,6 +149,69 @@ namespace OfficeDeskReservationSystemUI
             {
                 HideLoading();
                 await DisplayAlert("NoSQL Error", $"Failed to transform: {ex.Message}", "OK");
+            }
+        }
+
+        // ==========================================
+        // OPERACJA: BENCHMARK / TESTY WYDAJNOŚCI
+        // ==========================================
+        private async void OnRunTestsClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                ShowLoading("Running Performance Benchmarks...");
+                string benchmarkResult = "";
+
+                await Task.Run(() =>
+                {
+                    // Zapamiętujemy oryginalne wyjście konsoli
+                    var originalConsoleOut = Console.Out;
+
+                    try
+                    {
+                        // Tworzymy strumień tekstowy, by przechwycić to, co metody z biblioteki wrzucają do Console.WriteLine
+                        using (var stringWriter = new StringWriter())
+                        {
+                            Console.SetOut(stringWriter);
+
+                            var client = new MongoClient("mongodb://localhost:27017");
+                            var database = client.GetDatabase("OfficeDeskReservationDB");
+
+                            // Używamy REFEKSJI, aby wywołać prywatne metody z Twojej statycznej klasy PerformanceBenchmarker
+                            var type = typeof(PerformanceBenchmarker);
+                            var flags = BindingFlags.NonPublic | BindingFlags.Static;
+
+                            var m1 = type.GetMethod("TestDeepFetch", flags);
+                            var m2 = type.GetMethod("TestSearchByEmail", flags);
+                            var m3 = type.GetMethod("TestMassUpdate", flags);
+
+                            // Bezpiecznie odpalamy po kolei testy z oryginalnej biblioteki
+                            m1?.Invoke(null, new object[] { _context, database });
+                            m2?.Invoke(null, new object[] { _context, database });
+                            m3?.Invoke(null, new object[] { _context, database });
+
+                            // Zgrywamy cały przechwycony tekst
+                            benchmarkResult = stringWriter.ToString();
+                        }
+                    }
+                    finally
+                    {
+                        // Przywracamy domyślną konsolę (wymagane, by nie zepsuć reszty aplikacji)
+                        Console.SetOut(originalConsoleOut);
+                    }
+                });
+
+                HideLoading();
+
+                if (string.IsNullOrWhiteSpace(benchmarkResult))
+                    benchmarkResult = "Benchmark finished, but no output was generated.";
+
+                await DisplayAlert("Benchmark Results", benchmarkResult, "OK");
+            }
+            catch (Exception ex)
+            {
+                HideLoading();
+                await DisplayAlert("Test Error", $"Failed to run benchmark: {ex.Message}", "OK");
             }
         }
 
